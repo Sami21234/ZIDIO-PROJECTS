@@ -1,0 +1,5 @@
+# # Datasets folder ki baqi sab cheezein ignore karein
+Datasets/*
+
+# # Lekin README_Datasets.md ko ignore mat karein (allow karein)
+# !Datasets/README_Datasets.
