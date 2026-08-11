@@ -1,3 +1,3 @@
-# Project FORESIGHT — NorthBay Living Demand & Inventory Intelligence
+# Project FORESIGHT ï¿½ NorthBay Living Demand & Inventory Intelligence
 Zidio Internship . Data Science & Analytics
-Team: [your names]
+Team: 11
