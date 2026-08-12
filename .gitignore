@@ -1,5 +1,7 @@
-# # Datasets folder ki baqi sab cheezein ignore karein
-Datasets/*
+.venv/
+venv/
+__pycache__/
+*.pyc
+assets/
 
-# # Lekin README_Datasets.md ko ignore mat karein (allow karein)
-# !Datasets/README_Datasets.
+
