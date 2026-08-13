@@ -114,3 +114,28 @@ def load_and_clean(path: str) -> pd.DataFrame:
           f"({before - after:,} removed: cancellations / invalid qty-price / dupes)")
     return df       # return the clean data.
 
+# Step 2 — sku_master (dim)
+def build_sku_master(df: pd.DataFrame) -> pd.DataFrame:
+    # most frequent description per SKU (descriptions are sometimes inconsistent)
+    desc = (df.groupby("StockCode")["Description"]
+              .agg(lambda x: x.value_counts().idxmax())     # returns the most common or highest count of products.
+              .rename("description"))
+    
+    launch_date = df.groupby("StockCode")["InvoiceDate"].min().rename("launch_date")        # launch_date of the product.
+    list_price = df.groupby("StockCode")["Price"].median().rename("list_price")
+
+    # combine the product information
+    sku = pd.concat([desc, launch_date, list_price], axis=1).reset_index()
+    sku = sku.rename(columns={"StockCode": "sku_id"})
+
+    sku["category"] = sku["description"].apply(categorize)
+    sku["subcategory"] = sku["description"].str.split().str[0].str.title()  # crude but documented
+    sku["margin_assumed"] = sku["category"].map(CATEGORY_MARGIN)
+    # A3: unit_cost derived from list_price and assumed category margin
+    sku["unit_cost"] = (sku["list_price"] * (1 - sku["margin_assumed"])).round(2)
+    sku["list_price"] = sku["list_price"].round(2)
+
+    return sku[["sku_id", "description", "category", "subcategory",
+                "launch_date", "unit_cost", "list_price"]]
+
+
