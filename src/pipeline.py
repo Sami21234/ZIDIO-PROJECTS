@@ -139,3 +139,54 @@ def build_sku_master(df: pd.DataFrame) -> pd.DataFrame:
                 "launch_date", "unit_cost", "list_price"]]
 
 
+# Step 3 — calendar (dim)
+UK_FIXED_HOLIDAYS = {
+    (1, 1): "New Year's Day",
+    (12, 25): "Christmas Day",
+    (12, 26): "Boxing Day",
+}
+PROMO_WINDOWS = [
+    # (start_month, start_day, end_month, end_day, label)
+    (11, 20, 11, 30, "Black Friday / Pre-Christmas"),
+    (12, 1, 12, 24, "Christmas Sale"),
+    (12, 26, 12, 31, "Boxing Day Sale"),
+    (1, 1, 1, 15, "New Year Sale"),
+    (6, 15, 7, 15, "Summer Sale"),
+]
+
+# function to build the calendar(dates)
+def build_calendar(min_date, max_date) -> pd.DataFrame:
+    dates = pd.date_range(min_date.normalize(), max_date.normalize(), freq="D")         # freq="D" means: daily.
+    cal = pd.DataFrame({"date": dates})
+    cal["week"] = cal["date"].dt.isocalendar().week.astype(int)
+    cal["month"] = cal["date"].dt.month
+    cal["month_name"] = cal["date"].dt.month_name()
+
+# season function:
+    def season(m):
+        if m in (12, 1, 2):
+            return "Winter"
+        if m in (3, 4, 5):
+            return "Spring"
+        if m in (6, 7, 8):
+            return "Summer"
+        return "Autumn"
+    cal["season"] = cal["month"].apply(season)
+
+    # Holiday flag:
+    cal["is_holiday"] = cal["date"].apply(
+        lambda d: (d.month, d.day) in UK_FIXED_HOLIDAYS
+    ).astype(int)
+
+    def promo_event(d):
+        for sm, sd, em, ed, label in PROMO_WINDOWS:
+            start = pd.Timestamp(year=d.year, month=sm, day=sd)
+            end = pd.Timestamp(year=d.year, month=em, day=ed)
+            if start <= d <= end or (sm > em and (d >= start or d <= end)):
+                return label
+        return None
+    cal["promo_event"] = cal["date"].apply(promo_event)
+
+    return cal
+
+
