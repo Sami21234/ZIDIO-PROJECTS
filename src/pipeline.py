@@ -190,3 +190,125 @@ def build_calendar(min_date, max_date) -> pd.DataFrame:
     return cal
 
 
+# Step 4 — sales_daily (fact)       (converitng one row per sku per day.)
+def build_sales_daily(df: pd.DataFrame) -> pd.DataFrame:
+    df = df.copy()
+    df["date"] = df["InvoiceDate"].dt.normalize()
+    df["revenue"] = df["Quantity"] * df["Price"]
+
+    # group by date and sku
+    daily = (df.groupby(["date", "StockCode"])
+               .agg(units_sold=("Quantity", "sum"),
+                    revenue=("revenue", "sum"),
+                    unit_price=("Price", "mean"))
+               .reset_index()
+               .rename(columns={"StockCode": "sku_id"}))
+
+    # A5: promo_flag via rolling median price comparison
+    daily = daily.sort_values(["sku_id", "date"])
+    daily["rolling_median_price"] = (
+        daily.groupby("sku_id")["unit_price"]
+             .transform(lambda s: s.rolling(30, min_periods=5).median())
+    )
+    daily["promo_flag"] = (
+        (daily["unit_price"] <= 0.85 * daily["rolling_median_price"])
+        .fillna(False).astype(int)
+    )
+    daily = daily.drop(columns=["rolling_median_price"])
+    daily["unit_price"] = daily["unit_price"].round(2)
+    daily["revenue"] = daily["revenue"].round(2)
+
+    return daily[["date", "sku_id", "units_sold", "revenue", "unit_price", "promo_flag"]]
+
+
+# Step 5 — inventory_snapshots (dim) — SIMULATED (A4)
+def build_inventory_snapshots(sales_daily: pd.DataFrame, sku_master: pd.DataFrame,
+                               snapshot_freq: str = "W-MON") -> pd.DataFrame:
+    """
+    Simulates a weekly (s, S) reorder policy per SKU, driven by that SKU's own
+    observed demand. Not real client data — see assumption A4 in the module
+    docstring and in the data-quality memo.
+    """
+    rng = np.random.default_rng(SEED)
+    records = []
+
+    # per-SKU demand stats to parameterize the simulation
+    stats = (sales_daily.groupby("sku_id")["units_sold"]
+              .agg(avg_daily="mean", std_daily="std")
+              .fillna(0))
+
+    for sku_id, sku_dates in sales_daily.groupby("sku_id"):
+        avg_d = max(stats.loc[sku_id, "avg_daily"], 0.1)
+        std_d = stats.loc[sku_id, "std_daily"] if not np.isnan(stats.loc[sku_id, "std_daily"]) else avg_d * 0.5
+
+        lead_time_days = int(rng.integers(7, 22))          # 1-3 week supplier lead time, per SKU
+        safety_z = 1.65                                     # ~95% service level
+        reorder_point = round(avg_d * lead_time_days + safety_z * std_d * np.sqrt(lead_time_days))
+        order_up_to = round(reorder_point + avg_d * 14)     # cover ~2 more weeks on top of ROP
+
+        date_range = pd.date_range(sku_dates["date"].min(), sku_dates["date"].max(), freq="D")
+        demand_series = (sku_dates.set_index("date")["units_sold"]
+                                    .reindex(date_range, fill_value=0))
+
+        on_hand = order_up_to  # start full
+        on_order = 0
+        pending_arrivals = {}  # date -> qty
+
+        snap_dates = pd.date_range(date_range.min(), date_range.max(), freq=snapshot_freq)
+
+        for d in date_range:
+            if d in pending_arrivals:
+                on_hand += pending_arrivals.pop(d)
+                on_order = max(on_order - 0, 0)
+
+            on_hand = max(on_hand - demand_series.loc[d], 0)
+
+            if on_hand + on_order <= reorder_point:
+                order_qty = max(order_up_to - on_hand - on_order, 0)
+                if order_qty > 0:
+                    arrival = d + pd.Timedelta(days=lead_time_days)
+                    pending_arrivals[arrival] = pending_arrivals.get(arrival, 0) + order_qty
+                    on_order += order_qty
+
+            if d in snap_dates:
+                records.append({
+                    "date": d, "sku_id": sku_id,
+                    "on_hand_units": int(round(on_hand)),
+                    "on_order_units": int(round(on_order)),
+                    "lead_time_days": lead_time_days,
+                    "reorder_point": int(reorder_point),
+                })
+
+    return pd.DataFrame(records)
+
+
+# Main
+def main(input_path: str, outdir: str):
+    outdir = Path(outdir)
+    outdir.mkdir(parents=True, exist_ok=True)
+
+    df = load_and_clean(input_path)
+
+    sku_master = build_sku_master(df)
+    calendar = build_calendar(df["InvoiceDate"].min(), df["InvoiceDate"].max())
+    sales_daily = build_sales_daily(df)
+    inventory_snapshots = build_inventory_snapshots(sales_daily, sku_master)
+
+    sku_master.to_csv(outdir / "sku_master.csv", index=False)
+    calendar.to_csv(outdir / "calendar.csv", index=False)
+    sales_daily.to_csv(outdir / "sales_daily.csv", index=False)
+    inventory_snapshots.to_csv(outdir / "inventory_snapshots.csv", index=False)
+
+    print(f"[done] sku_master: {len(sku_master):,} SKUs")
+    print(f"[done] calendar: {len(calendar):,} days")
+    print(f"[done] sales_daily: {len(sales_daily):,} rows")
+    print(f"[done] inventory_snapshots: {len(inventory_snapshots):,} rows")
+    print(f"[done] written to {outdir}/")
+
+
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser()
+    parser.add_argument("--input", required=True, help="path to raw Online Retail II csv")
+    parser.add_argument("--outdir", default="data/processed")
+    args = parser.parse_args()
+    main(args.input, args.outdir)
