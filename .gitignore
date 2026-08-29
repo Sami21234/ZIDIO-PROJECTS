@@ -1,7 +1,50 @@
+
+
+# Python environment
+
 .venv/
 venv/
 __pycache__/
 *.pyc
+*.pyo
 assets/
 
 
+# Raw data - large, regenerable via src/pipeline.py from the
+# original Kaggle source. NOT needed for the app to run, and
+# the brief explicitly says not to commit large raw dumps.
+
+data/raw/*.csv
+data/raw/*.csv.gz
+data/raw/*.xlsx
+
+
+# Processed data & model - KEPT, not ignored.
+# The dashboard and API read these files directly at runtime;
+# without them committed, Streamlit Cloud / Render deploys will
+# crash on startup with FileNotFoundError.
+
+# (intentionally nothing here - do not add data/processed/ or models/)
+
+
+# IDE / OS clutter
+
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+
+# Jupyter
+
+.ipynb_checkpoints/
+
+
+# Streamlit
+
+.streamlit/secrets.toml
+
+
+# Logs
+
+*.log
