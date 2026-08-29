@@ -32,3 +32,18 @@ def train_model(train_df: pd.DataFrame) -> HistGradientBoostingRegressor:
 def predict(model, df: pd.DataFrame) -> np.ndarray:
     X = df[FEATURE_COLS + CAT_COLS]
     return np.clip(model.predict(X), 0, None)  # demand can't be negative
+
+if __name__ == "__main__":
+    import joblib
+    import os
+
+    df = pd.read_csv("data/processed/features.csv", parse_dates=["week"], dtype={"sku_id": str})
+    model_df = prepare_model_data(df)
+
+    # train on ALL available data - this is the production model,
+    # not a CV fold (CV was just to prove it beats baseline first)
+    final_model = train_model(model_df)
+
+    os.makedirs("models", exist_ok=True)
+    joblib.dump(final_model, "models/demand_model.joblib")
+    print("Final model saved to models/demand_model.joblib")
