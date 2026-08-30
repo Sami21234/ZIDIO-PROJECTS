@@ -11,7 +11,8 @@ NorthBay Living, a D2C home & lifestyle brand. Full brief: `Zidio_Project_Data_1
 | | |
 |---|---|
 | 📊 **Dashboard** | https://zidio-foresight.streamlit.app/ |
-
+| 🔌 **Scoring API** | https://foresight-scoring-api-xz0j.onrender.com |
+| 📄 **API docs** | https://foresight-scoring-api-xz0j.onrender.com/docs |
 
 ---
 
