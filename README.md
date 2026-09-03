@@ -2,7 +2,7 @@
 **Zidio Internship · Data Science & Analytics · Client: NorthBay Living**
 
 A 4-week engagement to build a demand forecasting and stockout/overstock risk system for
-NorthBay Living, a D2C home & lifestyle brand. Full brief: `Zidio_Project_Data_1_1.pdf`.
+NorthBay Living, a D2C home & lifestyle brand.
 
 ---
 
