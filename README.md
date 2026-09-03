@@ -6,13 +6,16 @@ NorthBay Living, a D2C home & lifestyle brand. Full brief: `Zidio_Project_Data_1
 
 ---
 
-## Live Links
+## Cohort submission form with all links
 
 | | |
 |---|---|
+| 💻 **Source Code** | https://github.com/Sami21234/ZIDIO-PROJECTS |
 | 📊 **Dashboard** | https://zidio-foresight.streamlit.app/ |
 | 🔌 **Scoring API** | https://foresight-scoring-api-xz0j.onrender.com |
 | 📄 **API docs** | https://foresight-scoring-api-xz0j.onrender.com/docs |
+| ◀️ **Demo Video** | https://www.youtube.com/watch?v=5pBaBf9y710 |
+| 📝 **[Project Report](reports\FORESIGHT_Final_Report.pdf)** 
 
 ---
 
@@ -130,5 +133,5 @@ matplotlib/Plotly.
 - [x] Live scoring-service URL
 - [x] This README - problem, data, setup, backtest result, assumptions
 - [x] Executive readout + data-quality/EDA memo
-- [ ] 3–5 minute demo video (unlisted link)
-- [ ] Cohort submission form with all links
+- [x] 3–5 minute demo video (unlisted link)
+- [x] Cohort submission form with all links
